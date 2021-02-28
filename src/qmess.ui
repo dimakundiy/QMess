@@ -138,10 +138,10 @@
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="edtFinalIP"/>
+      <widget class="QLineEdit" name="edtFileIP"/>
      </item>
      <item>
-      <widget class="QLineEdit" name="edtFinalPort"/>
+      <widget class="QLineEdit" name="edtFilePort"/>
      </item>
     </layout>
    </widget>
