@@ -11,10 +11,12 @@ RC_FILE += ico.rc
 
 SOURCES += \
     main.cpp \
-    qmess.cpp
+    qmess.cpp \
+    tools/tools.cpp
 
 HEADERS += \
-    qmess.h
+    qmess.h \
+    tools/tools.h
 
 FORMS += \
     qmess.ui
