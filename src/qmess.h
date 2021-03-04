@@ -1,6 +1,8 @@
 #ifndef QMESS_H
 #define QMESS_H
 
+#include "tools/tools.h"
+
 #include <QMainWindow>
 #include <QUdpSocket>
 #include <QTcpSocket>
@@ -37,12 +39,7 @@ public:
    explicit Qmess(QWidget *parent = nullptr);
     ~Qmess();
 
-    /* --- Tools --- */
-    QString toIPv4(qint32 arg);
-    QString getLocalIP();
-
     /* --- Chat helpers --- */
-    bool validNickName(QString name);
     void showMessage(MessageType type, QString hint, QString content);
 
     /* --- UDP --- */
@@ -88,7 +85,6 @@ private slots:
     void chooseSendFile();
     void listen();
     void acceptConnection();
-    void stopToRecvFile();
     void readConnection();
     void sendConnection();
     void sendFileInfo();

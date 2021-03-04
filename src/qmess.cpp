@@ -2,7 +2,6 @@
 #include "ui_qmess.h"
 
 #include <QDateTime>
-#include <QNetworkInterface>
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QMessageBox>
@@ -19,15 +18,13 @@ Qmess::Qmess(QWidget *parent)
 
     ui->ProgressBar->hide();
 
-    ui->labIPAdress->setText(getLocalIP());
+    ui->labIPAdress->setText(Tools::getLocalIP());
     ui->edtFileIP->setText("127.0.0.2");
     ui->edtFilePort->setText(QString::number(FILE_PORT));
 
     ui->btnSendFile->setEnabled(false);
-    ui->btnStop->setEnabled(false);
     ui->edtMessage->setEnabled(false);
     ui->btnSendMessage->setEnabled(false);
-    ui->btnStop->hide();
 
     state = NoState;
     sendTimes = 0;
@@ -93,55 +90,6 @@ void Qmess::showMessage(MessageType type, QString hint, QString content)
 
 //-----------------------------------------------------
 
-QString Qmess::toIPv4(qint32 arg)
-{
-    QString res;
-    int bits[4], cnt=0;
-
-    while(arg)
-    {
-        bits[cnt] = arg % 256;
-        arg /= 256;
-        cnt++;
-    }
-
-    for(int i=3;i>=0;i--)
-        res.append(QString::number(bits[i]).append(i==0?"":"."));
-    return res;
-}
-
-//-----------------------------------------------------
-
-QString Qmess::getLocalIP()
-{
-    //const QHostAddress &localhost = QHostAddress(QHostAddress::LocalHost);
-    //for (const QHostAddress &address: QNetworkInterface::allAddresses()) {
-    //    if (address.protocol() == QAbstractSocket::IPv4Protocol && address != localhost)
-    //         qDebug() << address.toString();
-    //}
-
-    QList<QHostAddress> list = QNetworkInterface::allAddresses();
-
-    foreach(QHostAddress in, list)
-    {
-        if(in.protocol() == QAbstractSocket::IPv4Protocol && in.toString().contains("192.168"))
-            return in.toString();
-    }
-
-    return QString();
-}
-
-//-----------------------------------------------------
-
-bool Qmess::validNickName(QString name)
-{
-    QRegExp reg1("[A-Za-z0-9_]{1,}");
-
-    return (reg1.exactMatch(name)) ? true : false ;
-}
-
-//-----------------------------------------------------
-
 void Qmess::sendJson(MessageType type, QString nick_name, QString content)
 {
     QJsonObject obj;
@@ -191,7 +139,7 @@ void Qmess::readAllMessage()
             if(obj.contains("type") && obj.contains("nick-name"))
             {
                 QJsonValue type = obj.take("type");
-                QString info = obj.take("nick-name").toString() + "(" + toIPv4(source.toIPv4Address()) + ")" ;
+                QString info = obj.take("nick-name").toString() + "(" + Tools::toIPv4(source.toIPv4Address()) + ")" ;
                 if(type.toString() == "chat" && obj.contains("content"))
                 {
                     showMessage(Chat,info,obj.take("content").toString());
@@ -245,7 +193,7 @@ void Qmess::sendLoginMessage()
 {
     if(!ui->edtName->isEnabled())
         QMessageBox::information(this,tr("Have logined!"),tr("Have logined!"),QMessageBox::Yes);
-    else if(!validNickName(ui->edtName->text()))
+    else if(!Tools::validNickName(ui->edtName->text()))
         QMessageBox::information(this,tr("Invaild Nickname!"),tr("Invaild Nickname!"),QMessageBox::Yes);
     else
     {
@@ -332,18 +280,10 @@ void Qmess::acceptConnection()
     connect(receiveSocket,SIGNAL(readyRead()),this,SLOT(readConnection()));
 
     ui->ProgressBar->show();
-    ui->btnStop->setEnabled(true);
-    connect(ui->btnStop,SIGNAL(clicked(bool)),this,SLOT(stopToRecvFile()));
 }
 
 //-----------------------------------------------------
 
-void Qmess::stopToRecvFile()
-{
-    receiveSocket->close();
-}
-
-//-----------------------------------------------------
 
 void Qmess::readConnection()
 {
@@ -454,11 +394,13 @@ void Qmess::continueToSend(qint64 size)
     {
         showMessage(System,tr("System"),tr(" -- File Transmission Complete"));
 
-        ui->ProgressBar->hide();
+
 
         sendSocket->disconnectFromHost();
         sendSocket->close();
         sendTimes = 0;
+
+        ui->ProgressBar->hide();
         sendFileLeftSize  = sendFileTotalSize ;
 
     }
