@@ -25,7 +25,7 @@ TRANSLATIONS += \
     QMess_ua.ts
 
 RESOURCES += \
-    resource.qrc
+    resources/resource.qrc
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

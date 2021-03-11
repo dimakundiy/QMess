@@ -1,12 +1,12 @@
 #include "qmess.h"
-#include <QTranslator>
 #include <QApplication>
+#include <QTranslator>
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
-    QFile qss(":/theme.qss");
+    QFile qss(":/theme/default.qss");
     qss.open(QFile::ReadOnly);
     qApp->setStyleSheet(qss.readAll());
     qss.close();
@@ -17,5 +17,6 @@ int main(int argc, char *argv[])
 
     Qmess w;
     w.show();
+
     return a.exec();
 }
