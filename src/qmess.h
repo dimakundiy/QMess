@@ -28,35 +28,33 @@ class Qmess : public QMainWindow
         System
     };
 
-    /* --- Program State for fileServer --- */
-    enum CurrentState {
-        SendFile,
-        ReceiveFile,
-        NoState
-    };
+    /* --- Local Listen Type --- */
+    enum ListenType{Listen,Unlisten};
 
 public:
    explicit Qmess(QWidget *parent = nullptr);
     ~Qmess();
-
-    /* --- Chat helpers --- */
-    void showMessage(MessageType type, QString hint, QString content);
-
-    /* --- UDP --- */
-    void sendJson(MessageType type,QString nick_name,QString content = "");
 
 private:
     Ui::Qmess *ui;
 
     /* --- UDP --- */
     const qint16 DEFAULT_MESSAGE_PORT = 6108;
+    const qint8 DEFAULT_MESSAGE_FONT_SIZE = 14;
     QUdpSocket * messageSender,* messageReader;
 
     /* --- TCP --- */
-    quint16 FILE_PORT = 6109;
+    const QString DEFAULT_FILE_IP = "127.0.0.1";
+    const quint16 DEFAULT_FILE_PORT = 6109;
+
+    /* --- Tools ---*/
+    void sendJson(MessageType type,QString nick_name,QString content = "");
+    void showMessage(MessageType type,QString hint,QString content);
+    bool localUserStatus();
+    void setLocalUserStatus(bool status);
+    void setLocalFileStatus(bool status);
 
     QTcpServer *fileServer;
-    CurrentState state;
 
     /* --- File Send --- */
     qint8 sendTimes;
@@ -72,6 +70,7 @@ private:
     QString receiveFileName;
     qint64 receiveFileTotalSize, receiveFileTransSize;
     QByteArray receiveFileBlock;
+    ListenType listenType;
 
 private slots:
 
