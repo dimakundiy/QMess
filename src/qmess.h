@@ -58,6 +58,7 @@ private:
     QTcpServer *fileServer;
 
     /* --- File Send --- */
+    QString chooseFileName;
     qint8 sendTimes;
     QTcpSocket *sendSocket;
     QFile *sendFile;

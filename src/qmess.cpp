@@ -246,14 +246,14 @@ void Qmess::sendLogoutMessage()
 
 void Qmess::chooseSendFile()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Choose File"), ".", tr("All File(*.*)"));
+    chooseFileName = QFileDialog::getOpenFileName(this, tr("Choose File"), ".", tr("All File(*.*)"));
 
-    if (!fileName.isEmpty())
+    if (!chooseFileName.isEmpty())
     {
         ui->btnSendFile->setEnabled(true);
-        sendFile = new QFile(fileName);
+        sendFile = new QFile(chooseFileName);
         sendFile->open(QIODevice::ReadOnly);
-        sendFileName = fileName.right(fileName.size()-fileName.lastIndexOf('/')-1);
+        sendFileName = chooseFileName.right(chooseFileName.size()-chooseFileName.lastIndexOf('/')-1);
         showMessage(System, tr("System"), tr(" -- File Selected: %1").arg(sendFileName));
         sendTimes = 0;
         sendFileBlock.clear();
@@ -438,6 +438,13 @@ void Qmess::continueToSend(qint64 size)
         sendSocket->disconnectFromHost();
 
         ui->ProgressBar->hide();
+
+        sendFile->close();
+
+        sendFile = new QFile(chooseFileName);
+        sendFile->open(QIODevice::ReadOnly);
+        sendTimes = 0;
+        sendFileBlock.clear();
     }
     else
     {
