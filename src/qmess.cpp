@@ -41,14 +41,16 @@ Qmess::Qmess(QWidget *parent)
     connect(ui->btnSendMessage,SIGNAL(clicked()),this,SLOT(sendChatMessage()));
     connect(ui->btnChooseFile,SIGNAL(clicked(bool)),this,SLOT(chooseSendFile()));
 
+    connect(ui->btnListen,SIGNAL(clicked(bool)),this,SLOT(listen()));
+    connect(ui->btnSendFile,SIGNAL(clicked(bool)),this,SLOT(sendConnection()));
+
     fileServer = new QTcpServer();
     connect(fileServer, SIGNAL(newConnection()), this, SLOT(acceptConnection()));
 
     sendSocket = new QTcpSocket();
     connect(sendSocket, SIGNAL(connected()), this, SLOT(sendFileInfo()));
+    connect(sendSocket, SIGNAL(bytesWritten(qint64)),this,SLOT(continueToSend(qint64)));
 
-    connect(ui->btnListen,SIGNAL(clicked(bool)),this,SLOT(listen()));
-    connect(ui->btnSendFile,SIGNAL(clicked(bool)),this,SLOT(sendConnection()));
 }
 
 //-----------------------------------------------------
@@ -63,7 +65,7 @@ Qmess::~Qmess()
 
 bool Qmess::localUserStatus()
 {
-    return (ui->edtName->isEnabled()) ? true : false;
+    return (ui->edtName->isEnabled()) ? false : true;
 }
 
 //-----------------------------------------------------
@@ -75,6 +77,7 @@ void Qmess::setLocalUserStatus(bool status)
     ui->btnSendMessage->setEnabled(status);
     ui->btnLogin->setEnabled(!status);
     ui->btnLogout->setEnabled(status);
+    ui->boxMask->setEnabled(!status);
 }
 
 //-----------------------------------------------------
@@ -178,7 +181,7 @@ void Qmess::readAllMessage()
                     if(user.size() == 0)
                         ui->listOnlineUser->insertItem(ui->listOnlineUser->count()+1,info);
                     showMessage(Login,info,tr(" -- enter the chat room"));
-                    if(!ui->edtName->isEnabled())
+                    if(localUserStatus())
                         sendJson(Online,ui->edtName->text());
                 }
                 else if(type.toString() == "logout")
@@ -221,11 +224,14 @@ void Qmess::sendLoginMessage()
 {
     if(!Tools::validNickName(ui->edtName->text()))
         QMessageBox::information(this,tr("Invaild Nickname!"),tr("Invaild Nickname!"),QMessageBox::Yes);
+    else if(Tools::getLocalIP().isNull())
+        QMessageBox::question(this,tr("Offline"),tr("Check your Network to login"),QMessageBox::Yes);
     else
     {
         setLocalUserStatus(true);
         setLocalFileStatus(true);
         ui->btnListen->setEnabled(true);
+        ui->labIPAdress->setText(Tools::getLocalIP());
         sendJson(Login,ui->edtName->text());
     }
 }
@@ -234,25 +240,30 @@ void Qmess::sendLoginMessage()
 
 void Qmess::sendLogoutMessage()
 {
-    setLocalUserStatus(false);
-    setLocalFileStatus(false);
-    sendJson(Logout,ui->edtName->text());
+    if(Tools::getLocalIP().isNull())
+        QMessageBox::question(this,tr("Offline"),tr("Check your Network to login"),QMessageBox::Yes);
+    else
+    {
+        setLocalUserStatus(false);
+        setLocalFileStatus(false);
+        sendJson(Logout,ui->edtName->text());
+    }
 }
 
 //-----------------------------------------------------
 
 void Qmess::chooseSendFile()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Choose File"), ".", tr("All File(*.*)"));
+    chooseFileName = QFileDialog::getOpenFileName(this, tr("Choose File"), ".", tr("All File(*.*)"));
 
-    if (!fileName.isEmpty())
+    if (!chooseFileName.isEmpty())
     {
         ui->btnSendFile->setEnabled(true);
-        sendFile = new QFile(fileName);
+        sendFile = new QFile(chooseFileName);
         sendFile->open(QIODevice::ReadOnly);
-        sendFileName = fileName.right(fileName.size()-fileName.lastIndexOf('/')-1);
+        sendFileName = chooseFileName.right(chooseFileName.size()-chooseFileName.lastIndexOf('/')-1);
         showMessage(System, tr("System"), tr(" -- File Selected: %1").arg(sendFileName));
-        sendFileTotalSize = sendFileLeftSize = 0;
+        sendTimes = 0;
         sendFileBlock.clear();
     }
 }
@@ -303,7 +314,36 @@ void Qmess::readConnection()
 
         ui->ProgressBar->setMaximum(receiveFileTotalSize);
 
-        recieveFile = new QFile("D:\\"+receiveFileName);
+        QString name = receiveFileName.mid(0,receiveFileName.lastIndexOf("."));
+        QString suffix = receiveFileName.mid(receiveFileName.lastIndexOf(".")+1,receiveFileName.size());
+
+        if( QSysInfo::kernelType() == "linux" )
+        {
+            if(QFile::exists(receiveFileName))
+            {
+                int id = 1;
+                while( QFile::exists( name + "(" + QString::number(id) + ")." + suffix ) )
+                    id++;
+                recieveFile = new QFile( name + "(" + QString::number(id) + ")." + suffix );
+            }
+            else
+                recieveFile = new QFile(receiveFileName);
+        }
+        else
+        {
+            if(QFile::exists(DEFAULT_FILE_STORE+receiveFileName))
+             {
+                 int id = 1;
+                 while( QFile::exists(DEFAULT_FILE_STORE + name + "(" + QString::number(id) + ")." + suffix) )
+                     id++;
+                 recieveFile = new QFile(DEFAULT_FILE_STORE + name + "(" + QString::number(id) + ")." + suffix);
+             }
+             else
+             {
+                 recieveFile = new QFile(DEFAULT_FILE_STORE+receiveFileName);
+             }
+        }
+
         recieveFile->open(QFile::ReadWrite);
 
         showMessage(System,tr("System"),tr(" -- File Name: %1 File Size: %2").arg(receiveFileName,QString::number(receiveFileTotalSize)));
@@ -327,8 +367,16 @@ void Qmess::readConnection()
         choice = QMessageBox::information(this,tr("Open File Folder?"),tr("Open File Folder?"),QMessageBox::Yes,QMessageBox::No);
         if(choice == QMessageBox::Yes)
         {
-            QDir dir("D://");
-            QDesktopServices::openUrl(QUrl(dir.absolutePath() , QUrl::TolerantMode));
+            if(QSysInfo::kernelType() == "linux")
+            {
+                QDir dir("");
+                QDesktopServices::openUrl(QUrl(dir.absolutePath() , QUrl::TolerantMode)); // 打开文件夹
+            }
+            else
+            {
+                QDir dir(DEFAULT_FILE_STORE);
+                QDesktopServices::openUrl(QUrl(dir.absolutePath() , QUrl::TolerantMode)); // 打开文件夹
+            }
         }
         receiveFileTotalSize = receiveFileTransSize = 0;
         receiveFileName = QString();
@@ -341,13 +389,13 @@ void Qmess::readConnection()
 
 void Qmess::sendFileInfo()
 {
-    sendFileEachSize = 4 * 1024;
+    sendFileEachSize = 40 * 1024;
 
     QDataStream out(&sendFileBlock,QIODevice::WriteOnly);
     out<<qint64(0)<<qint64(0)<<sendFileName;
 
-    sendFileTotalSize += sendFile->size() + sendFileBlock.size();
-    sendFileLeftSize += sendFile->size() + sendFileBlock.size();
+    sendFileTotalSize = sendFile->size() + sendFileBlock.size();
+    sendFileLeftSize = sendFile->size() + sendFileBlock.size();
 
     out.device()->seek(0);
     out<<sendFileTotalSize<<qint64(sendFileBlock.size());
@@ -359,8 +407,6 @@ void Qmess::sendFileInfo()
     ui->ProgressBar->show();
 
     showMessage(System,tr("System"),tr(" -- File Name: %1 File Size: %2").arg(sendFileName,QString::number(sendFileTotalSize)));
-
-    connect(sendSocket,SIGNAL(bytesWritten(qint64)),this,SLOT(continueToSend(qint64)));
 }
 
 //-----------------------------------------------------
@@ -371,8 +417,8 @@ void Qmess::sendConnection()
     if(sendTimes == 0)
     {
         sendSocket->connectToHost(QHostAddress(ui->edtFileIP->text()),ui->edtFilePort->text().toInt());
-        if(!sendSocket->waitForConnected(100))
-            QMessageBox::information(this,tr("ERROR"),tr("network error"),QMessageBox::Yes);
+        if(!sendSocket->waitForConnected(2000))
+            QMessageBox::information(this,tr("ERROR"),tr("Network error"),QMessageBox::Yes);
         else
             sendTimes = 1;
     }
@@ -393,25 +439,28 @@ void Qmess::continueToSend(qint64 size)
 
     sendFileLeftSize -= size;
 
-    sendFileBlock = sendFile->read( qMin(sendFileLeftSize,sendFileEachSize) );
-
-    sendSocket->write(sendFileBlock);
-
-    ui->ProgressBar->setValue(sendFileTotalSize - sendFileLeftSize);
-
     if(sendFileLeftSize == 0)
     {
         showMessage(System,tr("System"),tr(" -- File Transmission Complete"));
 
-
-
         sendSocket->disconnectFromHost();
-        sendSocket->close();
-        sendTimes = 0;
 
         ui->ProgressBar->hide();
-        sendFileLeftSize  = sendFileTotalSize ;
 
+        sendFile->close();
+
+        sendFile = new QFile(chooseFileName);
+        sendFile->open(QIODevice::ReadOnly);
+        sendTimes = 0;
+        sendFileBlock.clear();
+    }
+    else
+    {
+        sendFileBlock = sendFile->read( qMin(sendFileLeftSize,sendFileEachSize) );
+
+        sendSocket->write(sendFileBlock);
+
+        ui->ProgressBar->setValue(sendFileTotalSize - sendFileLeftSize);
     }
 
 }

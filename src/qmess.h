@@ -46,6 +46,7 @@ private:
     /* --- TCP --- */
     const QString DEFAULT_FILE_IP = "127.0.0.1";
     const quint16 DEFAULT_FILE_PORT = 6109;
+    const QString DEFAULT_FILE_STORE = "D:\\";
 
     /* --- Tools ---*/
     void sendJson(MessageType type,QString nick_name,QString content = "");
@@ -57,6 +58,7 @@ private:
     QTcpServer *fileServer;
 
     /* --- File Send --- */
+    QString chooseFileName;
     qint8 sendTimes;
     QTcpSocket *sendSocket;
     QFile *sendFile;
