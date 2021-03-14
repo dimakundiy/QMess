@@ -1,4 +1,4 @@
-QT       += core gui network
+QT       += core gui network quick
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -25,9 +25,19 @@ TRANSLATIONS += \
     QMess_ua.ts
 
 RESOURCES += \
+    qml.qrc \
     resources/resource.qrc
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+DISTFILES += \
+    CButton.qml \
+    CIcon.qml \
+    LogInPage.qml \
+    PasswordResetPage.qml \
+    RegisterScreen.qml \
+    UserInfoPage.qml \
+    main.qml

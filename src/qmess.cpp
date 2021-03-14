@@ -224,11 +224,14 @@ void Qmess::sendLoginMessage()
 {
     if(!Tools::validNickName(ui->edtName->text()))
         QMessageBox::information(this,tr("Invaild Nickname!"),tr("Invaild Nickname!"),QMessageBox::Yes);
+    else if(Tools::getLocalIP().isNull())
+        QMessageBox::question(this,tr("Offline"),tr("Check your Network to login"),QMessageBox::Yes);
     else
     {
         setLocalUserStatus(true);
         setLocalFileStatus(true);
         ui->btnListen->setEnabled(true);
+        ui->labIPAdress->setText(Tools::getLocalIP());
         sendJson(Login,ui->edtName->text());
     }
 }
@@ -237,9 +240,14 @@ void Qmess::sendLoginMessage()
 
 void Qmess::sendLogoutMessage()
 {
-    setLocalUserStatus(false);
-    setLocalFileStatus(false);
-    sendJson(Logout,ui->edtName->text());
+    if(Tools::getLocalIP().isNull())
+        QMessageBox::question(this,tr("Offline"),tr("Check your Network to login"),QMessageBox::Yes);
+    else
+    {
+        setLocalUserStatus(false);
+        setLocalFileStatus(false);
+        sendJson(Logout,ui->edtName->text());
+    }
 }
 
 //-----------------------------------------------------
